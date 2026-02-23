@@ -1,0 +1,12 @@
+# Global code owners - default for all files
+* @suren-thinklabsai
+
+# Helm charts directory
+/charts/ @suren-thinklabsai
+
+# Document Generator Service chart
+/charts/document-generator-service/ @suren-thinklabsai
+
+# Documentation files
+README.md @suren-thinklabsai
+
