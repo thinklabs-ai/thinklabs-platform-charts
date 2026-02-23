@@ -1,22 +1,35 @@
-Thinklabs Proprietary License
+Thinklabs Commercial License
 
 Copyright (c) 2024-2026 Thinklabs. All rights reserved.
 
-IMPORTANT: READ CAREFULLY BEFORE USING THIS SOFTWARE
+ELIGIBILITY:
+This software is licensed exclusively to clients who have an active commercial contract with Thinklabs. Unauthorized access, use, or distribution by any party without a valid contract is strictly prohibited.
 
-This software and all associated documentation, code, and materials are the exclusive property of Thinklabs and are protected by applicable copyright laws.
+GRANT OF LICENSE:
+Thinklabs hereby grants you a non-exclusive, royalty-free, worldwide license to use this software for commercial purposes, provided you are a contracted client of Thinklabs, subject to the terms and conditions of this License and your service agreement with Thinklabs.
+
+PERMITTED USES:
+- You may use this software for any commercial purpose without modification, provided you have a valid contract with Thinklabs.
+- You may copy, distribute, and deploy this software in your commercial applications and services.
+- You may integrate this software into your products and services.
+- You may use this software to generate revenue and conduct business operations.
 
 RESTRICTIONS:
-- This software is provided for authorized use only by Thinklabs and its authorized representatives.
-- You may not copy, modify, distribute, transmit, display, perform, reproduce, publish, license, create derivative works from, transfer, or sell any information, software, or services contained herein without the prior written consent of Thinklabs.
-- Reverse engineering, disassembly, or decompilation of this software is strictly prohibited.
-- You may not use this software for any purpose other than as expressly permitted by Thinklabs.
+- This license is granted ONLY to contracted clients of Thinklabs. If you do not have a valid contract with Thinklabs, you may not use this software.
+- You may not modify, adapt, translate, or create derivative works from this software.
+- You may not reverse engineer, disassemble, or decompile this software.
+- You may not remove or alter any copyright, trademark, or proprietary notices.
+- You may not sub-license, sell, or transfer this software itself (the source code).
+- You must retain all copyright notices and this License in any copies or distributions.
+
+ATTRIBUTION:
+You agree to maintain copyright notices and provide attribution to Thinklabs in any documentation or materials accompanying your use of this software.
 
 DISCLAIMER:
 THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THINKLABS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 TERMINATION:
-Thinklabs reserves the right to terminate your rights to use this software at any time without notice.
+Thinklabs reserves the right to terminate this License and your rights hereunder if you violate any terms of this License.
 
 For licensing inquiries, please contact Thinklabs.
 
