@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "document-generator-service.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ include "document-generator-service.name" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "document-generator-service.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "document-generator-service.name" . }}
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: {{ include "document-generator-service.fullname" . }}-sa
+
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
+
+      containers:
+        - name: {{ include "document-generator-service.name" . }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 9999
+          env:
+            - name: STORAGE_TYPE
+              value: {{ .Values.env.STORAGE_TYPE | quote }}
+
+            - name: AZURE_STORAGE_CONTAINER
+              value: {{ .Values.azure.container | quote }}
+
+            - name: AZURE_PROTOCOL
+              value: {{ .Values.azure.protocol | quote }}
+
+            # ✅ Needed for az:// uploads (adlfs/fsspec needs account_name)
+            - name: AZURE_STORAGE_ACCOUNT
+              value: {{ .Values.azure.storageAccount | quote }}
+
+            # (Optional) If you decide to use a connection string instead of Workload Identity
+            {{- if .Values.azure.connectionStringSecretName }}
+            - name: AZURE_STORAGE_CONNECTION_STRING
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.azure.connectionStringSecretName | quote }}
+                  key: {{ .Values.azure.connectionStringSecretKey | default "connectionString" | quote }}
+            {{- end }}
+
+          volumeMounts:
+            - name: log-volume
+              mountPath: /app/log
+            - name: data-volume
+              mountPath: /app/data
+      volumes:
+        - name: log-volume
+          emptyDir: {}
+        - name: data-volume
+          emptyDir: {}

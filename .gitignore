@@ -1,0 +1,45 @@
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Helm
+*.tgz
+charts/*/Chart.lock
+charts/*/charts/
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+
+# Local environment files
+.env
+.env.local
+*.local
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Logs
+*.log
+logs/
+
+# Build artifacts
+dist/
+build/
+*.out
+
+# Dependencies (if using any package managers)
+node_modules/
+vendor/
+go.sum
+

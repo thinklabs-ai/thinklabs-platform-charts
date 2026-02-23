@@ -1,0 +1,47 @@
+replicaCount: 1
+
+# ✅ REQUIRED: Set to your target namespace
+namespace: <your-namespace>
+
+image:
+  # Image from ThinkLabs Public ACR - no authentication required
+  repository: thinklabspublicacr.azurecr.io/thinklabs-document-generator-service-x86
+  pullPolicy: IfNotPresent
+  # Specify a version tag or use 'latest'
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 9999
+
+azure:
+  # ✅ REQUIRED: Your container name in Azure Storage
+  container: "<your-container-name>"
+  protocol: "az"
+
+  # ✅ REQUIRED: Your storage account name (used by az:// uploads)
+  storageAccount: "<your-storage-account-name>"
+
+  # Optional: use a connection string via secret (only if you choose that auth path)
+  # connectionStringSecretName: "azure-storage-conn"
+  # connectionStringSecretKey: "connectionString"
+
+  # Optionally, use a SAS token instead of accountKey (if your code supports it)
+  # sasToken: "<your-sas-token>"
+
+env:
+  STORAGE_TYPE: "azure"
+  # Add other environment variables as needed
+
+resources: {}
+
+serviceAccount:
+  # ✅ REQUIRED: Set to your Managed Identity client ID
+  annotations:
+    azure.workload.identity/client-id: <your-managed-identity-client-id>
+
+# ✅ REQUIRED: Image pull secret for private ACR
+# Must be created before installing the Helm chart
+# See HELM_QUICKSTART.md for instructions on creating acr-creds
+imagePullSecrets:
+  - name: acr-creds
