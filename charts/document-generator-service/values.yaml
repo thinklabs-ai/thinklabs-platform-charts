@@ -45,3 +45,24 @@ serviceAccount:
 # See HELM_QUICKSTART.md for instructions on creating acr-creds
 imagePullSecrets:
   - name: acr-creds
+
+# ✅ Ingress configuration
+ingress:
+  enabled: false
+  # ✅ REQUIRED (when enabled): Set to your host domain
+  host: "api.dev.thinklabs.ai"
+  # ✅ REQUIRED (when enabled): SSL certificate name for Azure Application Gateway
+  sslCertificate: "cert-document-generator-service-api-dev-thinklabs-ai-tls"
+  # Cert-manager cluster issuer name
+  certManagerIssuer: "thinklabs-http"
+  # Health probe path for Azure Application Gateway
+  healthProbePath: "/document-generator-service/v1/health"
+  # Ingress class name
+  ingressClassName: "azure-application-gateway"
+  # API path prefix
+  pathPrefix: "/document-generator-service/v1"
+  # Additional annotations if needed
+  annotations: {}
+    # Example:
+    # nginx.ingress.kubernetes.io/rewrite-target: /
+

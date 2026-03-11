@@ -355,6 +355,147 @@ kubectl describe pod -n ${NAMESPACE} <pod-name>
 kubectl logs -n ${NAMESPACE} -l app=document-generator-service
 ```
 
+### Step 11: Configure Ingress (Optional)
+
+The Helm chart includes an optional Ingress resource for exposing the Document Generator Service via Azure Application Gateway. Ingress is disabled by default and can be enabled during installation.
+
+#### Ingress Configuration Values
+
+The following ingress parameters can be customized in `values.yaml` or via Helm command-line flags:
+
+| Parameter | Description | Default | Required |
+|-----------|-------------|---------|----------|
+| `ingress.enabled` | Enable/disable the ingress resource | `false` | No |
+| `ingress.host` | Host domain for the ingress | `document-generator-service.api.dev.thinklabs.ai` | Yes (when enabled) |
+| `ingress.sslCertificate` | Azure AppGW SSL certificate name | `cert-document-generator-service-api-dev-thinklabs-ai-tls` | Yes (when enabled) |
+| `ingress.certManagerIssuer` | Cert-manager cluster issuer name | `thinklabs-http` | No |
+| `ingress.healthProbePath` | Health check endpoint for Azure AppGW | `/document-generator-service/v1/health` | No |
+| `ingress.ingressClassName` | Ingress controller class name | `azure-application-gateway` | No |
+| `ingress.pathPrefix` | API path prefix for routing | `/document-generator-service/v1` | No |
+| `ingress.annotations` | Additional custom annotations | `{}` | No |
+
+#### Enable Ingress During Installation
+
+**Option 1: Using command-line flags**
+
+```bash
+helm install document-generator-service ./charts/document-generator-service \
+  --namespace ${NAMESPACE} \
+  --set ingress.enabled=true \
+  --set ingress.host="document-generator-service.your-domain.com" \
+  --set ingress.sslCertificate="your-certificate-name" \
+  --set ingress.certManagerIssuer="your-issuer-name" \
+  --set ingress.healthProbePath="/health" \
+  --set ingress.pathPrefix="/api/v1"
+```
+
+**Option 2: Update values.yaml and install**
+
+```yaml
+# In values.yaml, update the ingress section:
+ingress:
+  enabled: true
+  host: "document-generator-service.your-domain.com"
+  sslCertificate: "your-certificate-name"
+  certManagerIssuer: "your-issuer-name"
+  healthProbePath: "/document-generator-service/v1/health"
+  ingressClassName: "azure-application-gateway"
+  pathPrefix: "/document-generator-service/v1"
+  annotations: {}
+```
+
+Then install:
+
+```bash
+helm install document-generator-service ./charts/document-generator-service \
+  --namespace ${NAMESPACE}
+```
+
+#### Verify Ingress Deployment
+
+```bash
+# Check if ingress resource was created
+kubectl get ingress -n ${NAMESPACE}
+
+# Describe the ingress
+kubectl describe ingress -n ${NAMESPACE} <ingress-name>
+
+# View ingress details in YAML
+kubectl get ingress -n ${NAMESPACE} <ingress-name> -o yaml
+
+# Check ingress events
+kubectl get events -n ${NAMESPACE} --field-selector involvedObject.kind=Ingress
+```
+
+#### Ingress Template Details
+
+The ingress resource is defined in `templates/ingress.yaml` and includes:
+
+- **Metadata:** Ingress name and namespace configuration
+- **Annotations:** 
+  - `cert-manager.io/cluster-issuer` - Automatic SSL certificate provisioning
+  - `appgw.ingress.kubernetes.io/health-probe-path` - Azure AppGW health check
+  - `appgw.ingress.kubernetes.io/appgw-ssl-certificate` - SSL certificate binding
+- **Spec:**
+  - `ingressClassName` - Azure Application Gateway controller
+  - `rules` - Host and path-based routing to the Document Generator Service
+  - `backend` - Routes requests to the service on the configured port (default: 9999)
+
+#### Example Ingress Configuration
+
+Here's an example of what the generated Ingress resource looks like:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: document-generator-service-ingress
+  namespace: document-generator-service
+  annotations:
+    cert-manager.io/cluster-issuer: "thinklabs-http"
+    appgw.ingress.kubernetes.io/health-probe-path: "/document-generator-service/v1/health"
+    appgw.ingress.kubernetes.io/appgw-ssl-certificate: "cert-document-generator-service-api-dev-thinklabs-ai-tls"
+spec:
+  ingressClassName: azure-application-gateway
+  rules:
+    - host: api.dev.thinklabs.ai
+      http:
+        paths:
+          - path: /document-generator-service/v1
+            pathType: Prefix
+            backend:
+              service:
+                name: document-generator-service
+                port:
+                  number: 9999
+```
+
+#### Upgrade Ingress Configuration
+
+To update ingress settings after deployment:
+
+```bash
+# Upgrade with new ingress parameters
+helm upgrade document-generator-service ./charts/document-generator-service \
+  --namespace ${NAMESPACE} \
+  --set ingress.enabled=true \
+  --set ingress.host="new-host.your-domain.com"
+
+# Or disable ingress
+helm upgrade document-generator-service ./charts/document-generator-service \
+  --namespace ${NAMESPACE} \
+  --set ingress.enabled=false
+```
+
+#### Ingress Prerequisites
+
+Before enabling ingress, ensure:
+- ✅ Azure Application Gateway Ingress Controller is installed on your AKS cluster
+- ✅ Cert-manager is installed and configured (if using automatic SSL provisioning)
+- ✅ The domain name is registered and DNS is configured
+- ✅ SSL certificate exists in Azure AppGW (if not using cert-manager for auto-provisioning)
+- ✅ Appropriate ingress controller role assignments are in place
+
 ---
 
 ## 🔍 Troubleshooting
