@@ -8,13 +8,26 @@ kube-prometheus-stack:
   defaultRules:
     create: true
 
+  global:
+    nodeSelector:
+      workload-type: general
+    tolerations:
+      - key: "workload-type"
+        operator: "Equal"
+        value: "general"
+        effect: "NoSchedule"
+
   alertmanager:
     enabled: true
     alertmanagerSpec:
       replicas: 1
       nodeSelector:
         workload-type: general
-      tolerations: []
+      tolerations:
+        - key: "workload-type"
+          operator: "Equal"
+          value: "general"
+          effect: "NoSchedule"
       image:
         registry: thinklabsinternalacrdev.azurecr.io
         repository: infra/monitoring/alertmanager
@@ -37,7 +50,11 @@ kube-prometheus-stack:
       tag: 12.4.1
     nodeSelector:
       workload-type: general
-    tolerations: []
+    tolerations:
+      - key: "workload-type"
+        operator: "Equal"
+        value: "general"
+        effect: "NoSchedule"
     persistence:
       enabled: true
       type: pvc
@@ -67,7 +84,11 @@ kube-prometheus-stack:
   prometheusOperator:
     nodeSelector:
       workload-type: general
-    tolerations: []
+    tolerations:
+      - key: "workload-type"
+        operator: "Equal"
+        value: "general"
+        effect: "NoSchedule"
     image:
       registry: thinklabsinternalacrdev.azurecr.io
       repository: infra/monitoring/prometheus-operator
@@ -96,7 +117,11 @@ kube-prometheus-stack:
       tag: v2.18.0
     nodeSelector:
       workload-type: general
-    tolerations: []
+    tolerations:
+      - key: "workload-type"
+        operator: "Equal"
+        value: "general"
+        effect: "NoSchedule"
 
   prometheus-node-exporter:
     image:
@@ -104,7 +129,10 @@ kube-prometheus-stack:
       repository: infra/monitoring/node-exporter
       tag: v1.10.2
     tolerations:
-      - operator: Exists
+      - key: "workload-type"
+        operator: "Equal"
+        value: "general"
+        effect: "NoSchedule"
 
   prometheus:
     enabled: true
@@ -113,7 +141,11 @@ kube-prometheus-stack:
       retention: 15d
       nodeSelector:
         workload-type: general
-      tolerations: []
+      tolerations:
+        - key: "workload-type"
+          operator: "Equal"
+          value: "general"
+          effect: "NoSchedule"
       image:
         registry: thinklabsinternalacrdev.azurecr.io
         repository: infra/monitoring/prometheus
@@ -133,12 +165,40 @@ kube-prometheus-stack:
 
   kubeScheduler:
     enabled: true
+    nodeSelector:
+      workload-type: general
+    tolerations:
+      - key: "workload-type"
+        operator: "Equal"
+        value: "general"
+        effect: "NoSchedule"
 
   kubeControllerManager:
     enabled: true
+    nodeSelector:
+      workload-type: general
+    tolerations:
+      - key: "workload-type"
+        operator: "Equal"
+        value: "general"
+        effect: "NoSchedule"
 
   coreDns:
     enabled: true
+    nodeSelector:
+      workload-type: general
+    tolerations:
+      - key: "workload-type"
+        operator: "Equal"
+        value: "general"
+        effect: "NoSchedule"
 
   kubeProxy:
     enabled: true
+    nodeSelector:
+      workload-type: general
+    tolerations:
+      - key: "workload-type"
+        operator: "Equal"
+        value: "general"
+        effect: "NoSchedule"
