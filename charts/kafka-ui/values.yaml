@@ -1,0 +1,51 @@
+replicaCount: 1
+
+image:
+  repository: thinklabsinternalacrdev.azurecr.io/infra/kafka-ui/kafka-ui
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 8080
+
+kafka:
+  bootstrapServers: "kafka-kafka.kafka.svc.cluster.local:9092"
+  clusterName: "thinklabs-dev-kafka"
+
+resources:
+  requests:
+    cpu: "250m"
+    memory: "512Mi"
+  limits:
+    cpu: "1"
+    memory: "1Gi"
+
+nodeSelector:
+  workload-type: general
+
+tolerations:
+  - key: "workload-type"
+    operator: "Equal"
+    value: "general"
+    effect: "NoSchedule"
+
+affinity: {}
+
+ingress:
+  enabled: false
+  className: nginx
+  host: kafka-ui.dev.thinklabs.ai
+  path: /
+  pathType: Prefix
+  tls:
+    enabled: false
+    secretName: ""
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: "https://auth.dev.thinklabs.ai/oauth2/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://auth.dev.thinklabs.ai/oauth2/start?rd=$scheme://$http_host$escaped_request_uri"

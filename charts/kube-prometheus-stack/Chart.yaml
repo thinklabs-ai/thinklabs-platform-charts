@@ -1,0 +1,10 @@
+apiVersion: v2
+name: kube-prometheus-stack
+description: Thin wrapper chart for Prometheus community kube-prometheus-stack
+type: application
+version: 0.1.0
+
+dependencies:
+  - name: kube-prometheus-stack
+    version: "82.10.5"
+    repository: "https://prometheus-community.github.io/helm-charts"

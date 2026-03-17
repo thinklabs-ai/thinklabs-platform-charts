@@ -1,0 +1,144 @@
+kube-prometheus-stack:
+  nameOverride: ""
+  fullnameOverride: ""
+
+  crds:
+    enabled: true
+
+  defaultRules:
+    create: true
+
+  alertmanager:
+    enabled: true
+    alertmanagerSpec:
+      replicas: 1
+      nodeSelector:
+        workload-type: general
+      tolerations: []
+      image:
+        registry: thinklabsinternalacrdev.azurecr.io
+        repository: infra/monitoring/alertmanager
+        tag: v0.31.1
+      storage:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: managed-csi
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 20Gi
+
+  grafana:
+    enabled: true
+    image:
+      registry: thinklabsinternalacrdev.azurecr.io
+      repository: infra/monitoring/grafana
+      tag: 12.4.1
+    nodeSelector:
+      workload-type: general
+    tolerations: []
+    persistence:
+      enabled: true
+      type: pvc
+      storageClassName: managed-csi
+      accessModes:
+        - ReadWriteOnce
+      size: 20Gi
+    admin:
+      existingSecret: grafana-admin-secret
+      userKey: admin-user
+      passwordKey: admin-password
+    service:
+      type: ClusterIP
+      port: 80
+    ingress:
+      enabled: false
+    sidecar:
+      image:
+        registry: thinklabsinternalacrdev.azurecr.io
+        repository: infra/monitoring/k8s-sidecar
+        tag: 2.5.0
+    downloadDashboardsImage:
+      registry: thinklabsinternalacrdev.azurecr.io
+      repository: infra/monitoring/busybox
+      tag: 1.37.0
+
+  prometheusOperator:
+    nodeSelector:
+      workload-type: general
+    tolerations: []
+    image:
+      registry: thinklabsinternalacrdev.azurecr.io
+      repository: infra/monitoring/prometheus-operator
+      tag: v0.89.0
+    prometheusConfigReloader:
+      image:
+        registry: thinklabsinternalacrdev.azurecr.io
+        repository: infra/monitoring/prometheus-config-reloader
+        tag: v0.89.0
+    thanosImage:
+      registry: thinklabsinternalacrdev.azurecr.io
+      repository: infra/monitoring/thanos
+      tag: v0.41.0
+    admissionWebhooks:
+      patch:
+        enabled: true
+        image:
+          registry: thinklabsinternalacrdev.azurecr.io
+          repository: infra/monitoring/kube-webhook-certgen
+          tag: 1.7.8
+
+  kube-state-metrics:
+    image:
+      registry: thinklabsinternalacrdev.azurecr.io
+      repository: infra/monitoring/kube-state-metrics
+      tag: v2.18.0
+    nodeSelector:
+      workload-type: general
+    tolerations: []
+
+  prometheus-node-exporter:
+    image:
+      registry: thinklabsinternalacrdev.azurecr.io
+      repository: infra/monitoring/node-exporter
+      tag: v1.10.2
+    tolerations:
+      - operator: Exists
+
+  prometheus:
+    enabled: true
+    prometheusSpec:
+      replicas: 1
+      retention: 15d
+      nodeSelector:
+        workload-type: general
+      tolerations: []
+      image:
+        registry: thinklabsinternalacrdev.azurecr.io
+        repository: infra/monitoring/prometheus
+        tag: v3.7.2
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: managed-csi-premium
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 100Gi
+
+  kubeEtcd:
+    enabled: false
+
+  kubeScheduler:
+    enabled: true
+
+  kubeControllerManager:
+    enabled: true
+
+  coreDns:
+    enabled: true
+
+  kubeProxy:
+    enabled: true

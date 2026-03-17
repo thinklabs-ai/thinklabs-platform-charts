@@ -1,0 +1,59 @@
+image:
+  repository: thinklabsinternalacrdev.azurecr.io/infra/kafka/kafka
+  tag: "4.2.0"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 9092
+  headlessPort: 9092
+
+kraft:
+  clusterId: ""
+
+auth:
+  existingSecret: "kafka-secret"
+  secretKeys:
+    clusterIdKey: KAFKA_CLUSTER_ID
+
+persistence:
+  accessModes:
+    - ReadWriteOnce
+  size: 100Gi
+  storageClass: managed-csi
+
+resources:
+  requests:
+    cpu: "1"
+    memory: "2Gi"
+  limits:
+    cpu: "2"
+    memory: "4Gi"
+
+nodeSelector:
+  workload-type: general
+
+tolerations:
+  - key: "workload-type"
+    operator: "Equal"
+    value: "general"
+    effect: "NoSchedule"
+
+affinity: {}
+
+listeners:
+  client:
+    port: 9092
+  controller:
+    port: 9093
+  interBroker:
+    port: 9094
+
+logDirs: /var/lib/kafka/data
+
+heapOpts: "-Xms1g -Xmx1g"
