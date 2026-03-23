@@ -185,7 +185,7 @@ When port-forwarding is active:
 
 | Service | URL | Port Command |
 |---------|-----|--------------|
-| Orchestrator API | http://localhost:8080 | `kubectl port-forward -n orchestrator svc/orchestrator-api-thinklabs-orchestrator 8080:8080` |
+| Orchestrator API | http://localhost:8080 | `kubectl port-forward -n orchestrator svc/orchestrator-api-orchestrator 8080:8080` |
 | Prometheus | http://localhost:9090 | `kubectl port-forward -n monitoring svc/prometheus-operated 9090:9090` |
 | Grafana | http://localhost:3000 | `kubectl port-forward -n monitoring svc/monitoring-grafana 3000:80` |
 | Kafka Broker | localhost:29092 | `kubectl port-forward -n kafka svc/kafka-kafka 29092:9092` |

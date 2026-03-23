@@ -81,7 +81,6 @@ env:
   OTEL_ENV: "prod"
   
   # Slack notifications
-  SLACK_WEBHOOK_URL: ""  # Set via secret
   SLACK_NOTIFY_STATUSES: "FAILED,SUCCEEDED"
 
 kafka:

@@ -43,7 +43,6 @@ env:
   REDIS_DB: "0"
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.observability.svc.cluster.local:4318
   OTEL_ENV: dev
-  SLACK_WEBHOOK_URL: ""
   SLACK_NOTIFY_STATUSES: "FAILED,SUCCEEDED,PENDING"
 
 resources: {}

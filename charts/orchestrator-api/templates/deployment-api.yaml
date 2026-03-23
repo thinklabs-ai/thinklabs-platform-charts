@@ -96,7 +96,10 @@ spec:
             - name: OTEL_ENV
               value: {{ .Values.env.OTEL_ENV | quote }}
             - name: SLACK_WEBHOOK_URL
-              value: {{ .Values.env.SLACK_WEBHOOK_URL | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: slack-webhook
+                  key: webhook-url
             - name: SLACK_NOTIFY_STATUSES
               value: {{ .Values.env.SLACK_NOTIFY_STATUSES | quote }}
             {{- if .Values.env.KAFKA_SASL_PASSWORD }}
