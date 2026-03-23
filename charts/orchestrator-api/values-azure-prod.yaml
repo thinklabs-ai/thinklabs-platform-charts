@@ -1,0 +1,91 @@
+# Azure Production Environment Values
+namespace: orchestrator-prod
+
+tenant: thinklabs
+environment: prod
+
+# Azure Container Registry
+image:
+  repository: thinklabsinternalacrdev.azurecr.io/orchestrator-api
+  tag: "1.0.0"  # Use specific version tags in production, not latest
+  pullPolicy: IfNotPresent
+  pullSecrets:
+    - name: acr-secret
+
+statusConsumerImage:
+  repository: thinklabsinternalacrdev.azurecr.io/status-consumer
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+  pullSecrets:
+    - name: acr-secret
+
+# Scale replicas for production
+replicaCount: 3
+
+# Production resource limits
+resources:
+  api:
+    limits:
+      cpu: "1"
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+  statusConsumer:
+    limits:
+      cpu: "1"
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+api:
+  service:
+    type: ClusterIP
+    port: 8080
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.ingress.kubernetes.io/rate-limit: "100"
+      nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    hosts:
+      - host: "service.thinklabs.ai"
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - hosts:
+          - "service.thinklabs.ai"
+        secretName: "service-thinklabs-ai-tls"
+
+env:
+  # Kafka deployed in AKS (in a separate nodepool)
+  KAFKA_BROKERS: "kafka-kafka.kafka:9092"
+  KAFKA_SECURITY_PROTOCOL: "PLAINTEXT"
+  
+  TOPIC_REQUESTS: "thinklabs.mlops.request"
+  TOPIC_STATUS: "thinklabs.mlops.status"
+  TOPIC_RESPONSE: "thinklabs.mlops.response"
+  
+  # Production Redis - either in-cluster or Azure managed
+  STATUS_STORE: redis
+  REDIS_ADDR: "redis-service.redis:6379"  # In-cluster Redis. For Azure Cache: "thinklabs-prod-redis.redis.cache.windows.net:6380"
+  REDIS_DB: "0"
+  REDIS_PASSWORD: ""  # Only needed if using managed Azure Redis
+  REDIS_TLS_ENABLED: "false"
+  
+  # Observability - OTEL config for distributed tracing
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.observability.svc.cluster.local:4318
+  OTEL_ENV: "prod"
+  
+  # Slack notifications
+  SLACK_WEBHOOK_URL: ""  # Set via secret
+  SLACK_NOTIFY_STATUSES: "FAILED,SUCCEEDED"
+
+kafka:
+  bootstrap: "kafka-kafka.kafka:9092"
+  topicPartitions: 5
+  topicReplication: 3
+  cliImage: confluentinc/cp-kafka:7.4.0

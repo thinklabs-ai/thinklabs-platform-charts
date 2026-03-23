@@ -1,0 +1,4 @@
+apiVersion: v2
+name: thinklabs-orchestrator
+version: 0.1.0
+description: Helm chart for ThinkLabs MLOps Orchestrator API and status-consumer

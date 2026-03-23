@@ -1,0 +1,67 @@
+# Default values for thinklabs-orchestrator.
+namespace: orchestrator
+
+tenant: thinklabs
+environment: dev
+
+image:
+  repository: <your-docker-repo>/orchestrator-api
+  tag: latest
+  pullPolicy: IfNotPresent
+
+statusConsumerImage:
+  repository: <your-docker-repo>/status-consumer
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+api:
+  service:
+    type: ClusterIP
+    port: 8080
+  ingress:
+    enabled: true
+    className: "nginx"
+    hosts:
+      - host: "{{ .Values.environment }}.service.thinklabs.ai"
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - hosts:
+          - "{{ .Values.environment }}.service.thinklabs.ai"
+        secretName: "{{ .Values.environment }}-service-thinklabs-ai-tls"
+
+env:
+  KAFKA_BROKERS: kafka:9092
+  TOPIC_REQUESTS: "{{ .Values.tenant }}.mlops.request"
+  TOPIC_STATUS: "{{ .Values.tenant }}.mlops.status"
+  TOPIC_RESPONSE: "{{ .Values.tenant }}.mlops.response"
+  STATUS_STORE: redis
+  REDIS_ADDR: redis-service.redis:6379
+  REDIS_DB: "0"
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.observability.svc.cluster.local:4318
+  OTEL_ENV: dev
+  SLACK_WEBHOOK_URL: ""
+  SLACK_NOTIFY_STATUSES: "FAILED,SUCCEEDED,PENDING"
+
+resources: {}
+
+# Service Account Configuration
+serviceAccount:
+  create: true
+  annotations: {}
+  # Uncomment and set for Azure Workload Identity:
+  # azure.workload.identity/client-id: "<managed-identity-client-id>"
+
+# Pod Annotations for Workload Identity
+podAnnotations:
+  # Enable Workload Identity annotation on pods
+  azure.workload.identity/use: "true"
+
+kafka:
+  bootstrap: kafka:9092
+  topicPartitions: 1
+  topicReplication: 1
+  cliImage: bitnami/kafka:latest

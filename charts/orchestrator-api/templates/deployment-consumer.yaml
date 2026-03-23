@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: status-consumer
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: status-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: status-consumer
+  template:
+    metadata:
+      labels:
+        app: status-consumer
+      {{- if .Values.podAnnotations }}
+      annotations:
+        {{- toYaml .Values.podAnnotations | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- if .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.image.pullSecrets | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "thinklabs-orchestrator.fullname" . }}-sa
+      containers:
+        - name: status-consumer
+          image: "{{ .Values.statusConsumerImage.repository }}:{{ .Values.statusConsumerImage.tag }}"
+          imagePullPolicy: {{ .Values.statusConsumerImage.pullPolicy }}
+          resources:
+            {{- toYaml .Values.resources.statusConsumer | nindent 12 }}
+          env:
+            - name: ENV
+              value: {{ .Values.environment | quote }}
+            - name: TENANT
+              value: {{ .Values.tenant | quote }}
+            - name: KAFKA_BROKERS
+              value: {{ .Values.env.KAFKA_BROKERS | quote }}
+            - name: TOPIC_STATUS
+              value: {{ .Values.env.TOPIC_STATUS | quote }}
+            - name: KAFKA_GROUP_ID
+              value: thinklabs-mlops-status-consumer
+            {{- if .Values.env.KAFKA_SECURITY_PROTOCOL }}
+            - name: KAFKA_SECURITY_PROTOCOL
+              value: {{ .Values.env.KAFKA_SECURITY_PROTOCOL | quote }}
+            {{- end }}
+            {{- if .Values.env.KAFKA_SASL_MECHANISM }}
+            - name: KAFKA_SASL_MECHANISM
+              value: {{ .Values.env.KAFKA_SASL_MECHANISM | quote }}
+            {{- end }}
+            {{- if .Values.env.KAFKA_SASL_USERNAME }}
+            - name: KAFKA_SASL_USERNAME
+              value: {{ .Values.env.KAFKA_SASL_USERNAME | quote }}
+            {{- end }}
+            - name: STATUS_STORE
+              value: {{ .Values.env.STATUS_STORE | quote }}
+            - name: REDIS_ADDR
+              value: {{ .Values.env.REDIS_ADDR | quote }}
+            - name: REDIS_DB
+              value: {{ .Values.env.REDIS_DB | quote }}
+            {{- if .Values.env.REDIS_PASSWORD }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: password
+            {{- end }}
+            {{- if .Values.env.REDIS_TLS_ENABLED }}
+            - name: REDIS_TLS_ENABLED
+              value: {{ .Values.env.REDIS_TLS_ENABLED | quote }}
+            {{- end }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.env.OTEL_EXPORTER_OTLP_ENDPOINT | quote }}
+            - name: OTEL_ENV
+              value: {{ .Values.env.OTEL_ENV | quote }}
+            - name: SLACK_WEBHOOK_URL
+              value: {{ .Values.env.SLACK_WEBHOOK_URL | quote }}
+            - name: SLACK_NOTIFY_STATUSES
+              value: {{ .Values.env.SLACK_NOTIFY_STATUSES | quote }}
