@@ -7,7 +7,7 @@ set -e
 
 CHART_DIR="."
 NAMESPACE=${1:-thinklabs-orchestrator}
-VALUES_FILE=${2:-values-azure-dev.yaml}
+VALUES_FILE=${2:-values-dev.yaml}
 
 # Colors
 RED='\033[0;31m'

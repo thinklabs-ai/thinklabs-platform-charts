@@ -657,8 +657,7 @@ This section covers Azure AKS-specific configuration and best practices.
 
 ### Files Overview
 
-- **values-azure-dev.yaml** - Development environment configuration (2 replicas, smaller resources)
-- **values-azure-prod.yaml** - Production environment configuration (3 replicas, larger resources)
+- **values-dev.yaml** - Development environment configuration (2 replicas, smaller resources)
 - **secrets-example.yaml** - Example template for Kubernetes secrets (DO NOT commit with real values)
 - **create-secrets.sh** - Interactive script to create optional secrets in your cluster
 
@@ -688,25 +687,17 @@ REDIS_ADDR: "redis-service.redis:6379"  # or Azure managed Redis
 ```
 
 If using **Azure Cache for Redis** instead of in-cluster:
-- Edit `values-azure-dev.yaml` or `values-azure-prod.yaml`
+- Edit `values-dev.yaml`
 - Update `REDIS_ADDR` to your Azure Redis endpoint
 - Update `REDIS_TLS_ENABLED` to `"true"`
 
 ### Environment-Specific Configurations
 
-#### Development (values-azure-dev.yaml)
+#### Development (values-dev.yaml)
 - 2 replicas for API
 - Single replica for status-consumer
 - Smaller resource limits (500m CPU, 512Mi memory)
 - Domain: `dev.service.thinklabs.ai`
-- Kafka in same cluster
-
-#### Production (values-azure-prod.yaml)
-- 3 replicas for API
-- Single replica for status-consumer
-- Larger resource limits (1 CPU, 1Gi memory)
-- Domain: `service.thinklabs.ai`
-- No notifications for PENDING status
 - Kafka in same cluster
 
 ### Azure Container Registry (ACR) - Image Tagging Strategy
@@ -776,7 +767,7 @@ helm get values thinklabs -n orchestrator > current-values.yaml
 
 # Merge with new values (Kafka broker address might change)
 helm upgrade thinklabs . \
-  -f values-azure-dev.yaml \
+  -f values-dev.yaml \
   -n orchestrator
 ```
 

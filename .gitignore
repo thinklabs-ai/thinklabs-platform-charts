@@ -38,6 +38,12 @@ dist/
 build/
 *.out
 
+# Tests
+tests/
+
+# Documentation
+docs/
+
 # Dependencies (if using any package managers)
 node_modules/
 vendor/
