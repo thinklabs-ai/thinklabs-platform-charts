@@ -45,6 +45,11 @@ env:
   OTEL_ENV: dev
   SLACK_NOTIFY_STATUSES: "FAILED,SUCCEEDED,PENDING"
 
+# Slack Webhook Configuration
+slackWebhook:
+  enabled: false
+  url: ""
+
 resources: {}
 
 # Service Account Configuration

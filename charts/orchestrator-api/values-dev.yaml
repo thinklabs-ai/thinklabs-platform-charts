@@ -71,9 +71,13 @@ env:
   
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.observability.svc.cluster.local:4318
   OTEL_ENV: "dev"
-  
   # Slack notifications
   SLACK_NOTIFY_STATUSES: "FAILED,SUCCEEDED,PENDING"
+
+# Slack Webhook Configuration - override in separate secrets file or use environment
+slackWebhook:
+  enabled: true
+  url: ""  # Set via: --set slackWebhook.url='<webhook-url>' or values-secrets.yaml
 
 # Service Account Configuration for Workload Identity
 serviceAccount:

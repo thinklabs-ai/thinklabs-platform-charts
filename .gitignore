@@ -20,6 +20,10 @@ kubeconfig
 .env.local
 *.local
 
+# Secrets - never commit sensitive values
+*-secrets.yaml
+values-secrets.yaml
+
 # OS-specific files
 .DS_Store
 Thumbs.db
