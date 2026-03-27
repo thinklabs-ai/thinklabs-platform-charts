@@ -1,0 +1,17 @@
+namespace: inference
+tenant: thinklabs
+environment: dev
+
+# Simplify deployment name
+fullnameOverride: inference-consumer
+
+image:
+  repository: thinklabsinternalacrdev.azurecr.io/apps/inference-consumer
+  tag: latest
+kafka:
+  bootstrap: kafka-kafka.kafka:9092
+env:
+  KAFKA_BOOTSTRAP_SERVERS: "kafka-kafka.kafka:9092"
+  KAFKA_SECURITY_PROTOCOL: "PLAINTEXT"
+  ORCHESTRATOR_TENANT: "thinklabs"
+  MLFLOW_TRACKING_URI: "http://mlflow.internal-dev.thinklabs.ai"

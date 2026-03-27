@@ -1,0 +1,4 @@
+apiVersion: v2
+name: thinklabs-inference-consumer
+version: 0.1.0
+description: Helm chart for ThinkLabs Inference Consumer (Kafka worker)

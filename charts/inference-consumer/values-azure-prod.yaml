@@ -1,0 +1,30 @@
+namespace: inference-prod
+tenant: thinklabs
+environment: prod
+
+# Simplify deployment name
+fullnameOverride: inference-consumer
+
+replicaCount: 3
+image:
+  repository: thinklabsinternalacrdev.azurecr.io/apps/inference-consumer
+  tag: latest
+kafka:
+  bootstrap: kafka-kafka-prod.kafka.svc.cluster.local:9092
+  consumerGroup: thinklabs-inference-workers-prod
+  topicRequests: thinklabs.inference.request
+  securityProtocol: SASL_SSL
+  saslMechanism: PLAIN
+resources:
+  requests:
+    cpu: "1000m"
+    memory: "4Gi"
+  limits:
+    cpu: "2000m"
+    memory: "8Gi"
+env:
+  ORCHESTRATOR_TENANT: thinklabs
+  KAFKA_BOOTSTRAP_SERVERS: kafka-kafka-prod.kafka.svc.cluster.local:9092
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.observability.svc.cluster.local:4318
+  KAFKA_SECURITY_PROTOCOL: SASL_SSL
+  MLFLOW_TRACKING_URI: "http://mlflow-server-prod.monitoring:5000"
