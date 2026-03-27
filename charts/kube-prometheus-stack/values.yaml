@@ -69,6 +69,20 @@ kube-prometheus-stack:
     service:
       type: ClusterIP
       port: 80
+      loadBalancer:
+        enabled: false
+        # Set to true to use an internal load balancer on AKS
+        # When enabled, creates a separate LoadBalancer service with Azure internal annotation
+        port: 80
+        # Port that the load balancer listens on (default: 80)
+        # Traffic will be forwarded to the service port (80)
+        tls:
+          enabled: false
+          # TLS/HTTPS is configured at the Azure Load Balancer level, not in Kubernetes Service
+          # See AZURE_LB_TLS_SETUP.md for instructions on how to configure TLS on Azure LB
+          port: 443
+          certificateSecretName: ""
+          # Name of the TLS secret containing the certificate and key for Grafana
     ingress:
       enabled: false
     sidecar:

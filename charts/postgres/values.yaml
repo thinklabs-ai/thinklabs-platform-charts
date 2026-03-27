@@ -1,6 +1,6 @@
 image:
   repository: thinklabsinternalacrdev.azurecr.io/infra/postgres
-  tag: "16.13"
+  tag: "16"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
@@ -17,10 +17,7 @@ service:
   externalTrafficPolicy: Cluster
 
 postgres:
-  database: appdb
-  username: appuser
-  password: "change-me"
-  existingSecret: ""
+  existingSecret: postgres-akv-secret
   secretKeys:
     databaseKey: POSTGRES_DB
     usernameKey: POSTGRES_USER
@@ -41,7 +38,7 @@ resources:
     memory: "4Gi"
 
 nodeSelector:
-  workload: postgres
+  workload-type: database
 
 tolerations:
   - key: "postgresql"
@@ -72,3 +69,8 @@ probes:
 
 dns:
   hostname: postgres.dev.thinklabs.ai
+
+csi:
+  enabled: true
+  secretProviderClass: postgres-akv
+  mountPath: /mnt/secrets-store

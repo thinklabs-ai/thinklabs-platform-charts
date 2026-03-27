@@ -1,0 +1,108 @@
+namespace:
+  create: true
+  name: observability
+
+imagePullSecrets: []
+# Example if needed:
+# imagePullSecrets:
+#   - name: acr-secret
+
+jaeger:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: thinklabsinternalacrdev.azurecr.io/infra/monitoring/jaegertracing/all-in-one
+    tag: "1.57"
+    pullPolicy: IfNotPresent
+
+  env:
+    SPAN_STORAGE_TYPE: "badger"
+    BADGER_EPHEMERAL: "true"
+    COLLECTOR_OTLP_ENABLED: "true"
+
+  service:
+    type: ClusterIP
+    uiPort: 16686
+    grpcPort: 14250
+    otlpGrpcPort: 4317
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+  nodeSelector:
+    workload-type: general
+
+  tolerations:
+    - key: "workload-type"
+      operator: "Equal"
+      value: "general"
+      effect: "NoSchedule"
+
+  affinity: {}
+
+otelCollector:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: thinklabsinternalacrdev.azurecr.io/infra/monitoring/otel/opentelemetry-collector-contrib
+    tag: "0.96.0"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    otlpHttpPort: 4318
+    otlpGrpcPort: 4317
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  nodeSelector:
+    workload-type: general
+
+  tolerations:
+    - key: "workload-type"
+      operator: "Equal"
+      value: "general"
+      effect: "NoSchedule"
+
+  affinity: {}
+
+  config: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch:
+
+    exporters:
+      otlp:
+        endpoint: jaeger:4317
+        tls:
+          insecure: true
+
+      logging:
+        verbosity: detailed
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlp, logging]

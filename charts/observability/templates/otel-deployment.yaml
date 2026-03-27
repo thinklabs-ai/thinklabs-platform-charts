@@ -1,0 +1,59 @@
+{{- if .Values.otelCollector.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app.kubernetes.io/name: otel-collector
+    app.kubernetes.io/component: otel-collector
+spec:
+  replicas: {{ .Values.otelCollector.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: otel-collector
+      app.kubernetes.io/component: otel-collector
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: otel-collector
+        app.kubernetes.io/component: otel-collector
+    spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | indent 8 }}
+      {{- end }}
+      containers:
+        - name: otel-collector
+          image: "{{ .Values.otelCollector.image.repository }}:{{ .Values.otelCollector.image.tag }}"
+          imagePullPolicy: {{ .Values.otelCollector.image.pullPolicy }}
+          command:
+            - "/otelcol-contrib"
+            - "--config=/etc/otel/config.yaml"
+          ports:
+            - name: otlp-http
+              containerPort: {{ .Values.otelCollector.service.otlpHttpPort }}
+            - name: otlp-grpc
+              containerPort: {{ .Values.otelCollector.service.otlpGrpcPort }}
+          volumeMounts:
+            - name: otel-config
+              mountPath: /etc/otel
+          resources:
+{{ toYaml .Values.otelCollector.resources | indent 12 }}
+      volumes:
+        - name: otel-config
+          configMap:
+            name: otel-collector-config
+      {{- with .Values.otelCollector.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- with .Values.otelCollector.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- with .Values.otelCollector.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+      {{- end }}
+{{- end }}

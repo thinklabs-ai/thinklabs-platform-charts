@@ -1,0 +1,88 @@
+namespaceOverride: "mlops"
+
+nameOverride: ""
+fullnameOverride: ""
+
+replicaCount: 1
+
+image:
+  repository: thinklabsinternalacrdev.azurecr.io/infra/mlops/tensorboard-base
+  tag: "2.16.1"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+serviceAccount:
+  create: true
+  name: "thinklabs-tensorboard-service-account"
+  annotations: {}
+
+tensorboard:
+  logdir: /logs
+  extraArgs:
+    - "--reload_interval=30"
+
+service:
+  clusterIP:
+    enabled: true
+    port: 6006
+
+  internalLoadBalancer:
+    enabled: true
+    port: 80
+    loadBalancerIP: ""
+    annotations:
+      service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+
+persistence:
+  enabled: false
+  createPVC: true
+  existingClaim: ""
+  storageClassName: azurefile-csi
+  accessModes:
+    - ReadWriteMany
+  size: 20Gi
+  mountPath: /logs
+  readOnly: false
+
+blobStorage:
+  enabled: true  # Set to true to use blob storage instead of PVC
+  accountName: "thinklabsmlflow"  # e.g., "mystorageaccount"
+  containerName: ""  # e.g., "tensorboard-logs"
+  accountKey: ""  # Better to use managed identity
+  logPath: "tensorboard-logs"  # Path within the container to store logs, e.g., "tensorboard-logs"
+  protocol: "https"
+
+extraVolumes: []
+extraVolumeMounts: []
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 2Gi
+
+nodeSelector:
+  workload-type: general
+
+tolerations:
+  - key: "workload-type"
+    operator: "Equal"
+    value: "general"
+    effect: "NoSchedule"
+
+affinity: {}
+
+podLabels: {}
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false

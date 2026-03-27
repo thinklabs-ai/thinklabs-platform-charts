@@ -1,0 +1,34 @@
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: postgres-akv
+  namespace: postgres
+spec:
+  provider: azure
+  secretObjects:
+    - secretName: postgres-akv-secret
+      type: Opaque
+      data:
+        - key: POSTGRES_DB
+          objectName: postgres-db
+        - key: POSTGRES_USER
+          objectName: postgres-admin-username
+        - key: POSTGRES_PASSWORD
+          objectName: postgres-admin-password
+  parameters:
+    usePodIdentity: "false"
+    useVMManagedIdentity: "true"
+    userAssignedIdentityID: "8cbfeef8-b6c6-40ea-80f2-e900556c3964"
+    keyvaultName: "thinklabs-dev-kv"
+    tenantId: "5c7fc242-0748-48b3-9db7-c687d482ae59"
+    objects: |
+      array:
+        - |
+          objectName: postgres-db
+          objectType: secret
+        - |
+          objectName: postgres-admin-username
+          objectType: secret
+        - |
+          objectName: postgres-admin-password
+          objectType: secret

@@ -1,0 +1,82 @@
+replicaCount: 1
+
+image:
+  repository: thinklabsinternalacrdev.azurecr.io/infra/mlflow/mlflow
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: thinklabs-mlflow-service-account
+  annotations:
+    azure.workload.identity/client-id: "05138c19-f5c1-48cd-baa6-4d0469db7037"
+
+podLabels:
+  azure.workload.identity/use: "true"
+
+podAnnotations: {}
+
+resources:
+  requests:
+    cpu: "500m"
+    memory: "1Gi"
+  limits:
+    cpu: "2"
+    memory: "4Gi"
+
+nodeSelector:
+  workload-type: general
+
+tolerations:
+  - key: "workload-type"
+    operator: "Equal"
+    value: "general"
+    effect: "NoSchedule"
+
+affinity: {}
+
+postgres:
+  host: postgres-postgres
+  namespace: postgres
+  port: 5432
+  databaseFromSecret: true
+  database: mlflowdb
+  sslMode: disable
+  existingSecret: mlflow-db-secret
+
+mlflow:
+  allowedHosts: "*"
+  corsAllowedOrigins:
+    - "http://mlflow.internal-dev.thinklabs.ai"
+    - "http://localhost:5000"
+  extraArgs: []
+
+artifactStore:
+  storageAccount: thinklabsmlflow
+  container: mlflow-artifacts
+  path: mlflow
+  uploadDownloadTimeout: "1200"
+
+service:
+  targetPort: 5000
+
+clusterIPService:
+  enabled: true
+  port: 5000
+
+loadBalancerService:
+  enabled: true
+  port: 80
+  internal: true
+  annotations: {}
+  loadBalancerIP: ""
+  externalTrafficPolicy: Cluster
+
+env:
+  GUNICORN_CMD_ARGS: "--timeout 120 --workers 2"
+
+extraEnv: []

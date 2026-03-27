@@ -1,0 +1,51 @@
+namespace:
+  create: true
+  name: redis
+
+imagePullSecrets: []
+# Example:
+# imagePullSecrets:
+#   - name: acr-secret
+
+redis:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: thinklabsinternalacrdev.azurecr.io/infra/redis/redis
+    tag: "7.2"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 6379
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+
+  nodeSelector:
+    workload-type: general
+
+  tolerations:
+    - key: "workload-type"
+      operator: "Equal"
+      value: "general"
+      effect: "NoSchedule"
+
+  affinity: {}
+
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClassName: managed-csi
+
+  auth:
+    enabled: false
+    password: ""
+
+  appendonly: "yes"
