@@ -1,0 +1,49 @@
+namespace: inference
+
+tenant: thinklabs
+environment: dev
+
+# Simplify deployment name
+fullnameOverride: inference-consumer
+
+# Image configuration
+image:
+  repository: thinklabsinternalacrdev.azurecr.io/apps/inference-consumer
+  tag: latest
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: "500m"
+    memory: "2Gi"
+  limits:
+    cpu: "4000m"
+    memory: "8Gi"
+
+# Service Account
+serviceAccount:
+  create: true
+  annotations: {}
+  # azure.workload.identity/client-id: "<managed-identity-client-id>"
+
+podAnnotations:
+  azure.workload.identity/use: "true"
+
+# Kafka Configuration
+kafka:
+  bootstrap: kafka-kafka.kafka:9092
+  consumerGroup: thinklabs-inference-workers
+  topicRequests: thinklabs.mlops.request
+  securityProtocol: "PLAINTEXT"
+  saslMechanism: ""
+
+# Environment variables passed to the container
+env:
+  ORCHESTRATOR_TENANT: thinklabs
+  KAFKA_BOOTSTRAP_SERVERS: kafka-kafka.kafka:9092
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.observability.svc.cluster.local:4318
+  KAFKA_SECURITY_PROTOCOL: "PLAINTEXT"
+  MLFLOW_TRACKING_URI: "http://127.0.0.1:8080"
