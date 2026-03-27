@@ -24,20 +24,20 @@ api:
     enabled: true
     className: "nginx"
     hosts:
-      - host: "{{ .Values.environment }}.service.thinklabs.ai"
+      - host: "dev.service.thinklabs.ai"
         paths:
           - path: /
             pathType: Prefix
     tls:
       - hosts:
-          - "{{ .Values.environment }}.service.thinklabs.ai"
-        secretName: "{{ .Values.environment }}-service-thinklabs-ai-tls"
+          - "dev.service.thinklabs.ai"
+        secretName: "dev-service-thinklabs-ai-tls"
 
 env:
   KAFKA_BROKERS: kafka:9092
-  TOPIC_REQUESTS: "{{ .Values.tenant }}.mlops.request"
-  TOPIC_STATUS: "{{ .Values.tenant }}.mlops.status"
-  TOPIC_RESPONSE: "{{ .Values.tenant }}.mlops.response"
+  TOPIC_REQUESTS: "thinklabs.mlops.request"
+  TOPIC_STATUS: "thinklabs.mlops.status"
+  TOPIC_RESPONSE: "thinklabs.mlops.response"
   STATUS_STORE: redis
   REDIS_ADDR: redis-service.redis:6379
   REDIS_DB: "0"
