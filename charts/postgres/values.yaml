@@ -1,0 +1,76 @@
+image:
+  repository: thinklabsinternalacrdev.azurecr.io/infra/postgres
+  tag: "16"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: LoadBalancer
+  port: 5432
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+  loadBalancerIP: ""
+  externalTrafficPolicy: Cluster
+
+postgres:
+  existingSecret: postgres-akv-secret
+  secretKeys:
+    databaseKey: POSTGRES_DB
+    usernameKey: POSTGRES_USER
+    passwordKey: POSTGRES_PASSWORD
+
+persistence:
+  accessModes:
+    - ReadWriteOnce
+  size: 128Gi
+  storageClass: managed-csi-premium
+
+resources:
+  requests:
+    cpu: "500m"
+    memory: "1Gi"
+  limits:
+    cpu: "2"
+    memory: "4Gi"
+
+nodeSelector:
+  workload-type: database
+
+tolerations:
+  - key: "postgresql"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
+
+affinity: {}
+
+podSecurityContext:
+  fsGroup: 999
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 999
+  runAsGroup: 999
+
+env:
+  PGDATA: /var/lib/postgresql/data/pgdata
+
+probes:
+  readiness:
+    initialDelaySeconds: 15
+    periodSeconds: 10
+  liveness:
+    initialDelaySeconds: 30
+    periodSeconds: 20
+
+dns:
+  hostname: postgres.dev.thinklabs.ai
+
+csi:
+  enabled: true
+  secretProviderClass: postgres-akv
+  mountPath: /mnt/secrets-store

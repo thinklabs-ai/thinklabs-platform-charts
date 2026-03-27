@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mlflow.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "mlflow.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "mlflow.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "mlflow.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "mlflow.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.tolerations | nindent 8 }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: mlflow
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -euo pipefail
+
+              DB_HOST="{{ .Values.postgres.host }}.{{ .Values.postgres.namespace }}.svc.cluster.local"
+              DB_PORT="{{ .Values.postgres.port }}"
+              DB_SSLMODE="{{ .Values.postgres.sslMode }}"
+
+              if [ "{{ .Values.postgres.databaseFromSecret }}" = "true" ]; then
+                DB_NAME="${POSTGRES_DB}"
+              else
+                DB_NAME="{{ .Values.postgres.database }}"
+              fi
+
+              BACKEND_STORE_URI="postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSLMODE}"
+              MLFLOW_ARTIFACT_ROOT="wasbs://{{ .Values.artifactStore.container }}@{{ .Values.artifactStore.storageAccount }}.blob.core.windows.net/{{ .Values.artifactStore.path }}"
+              CORS_ALLOWED_ORIGINS="{{ join "," .Values.mlflow.corsAllowedOrigins }}"
+
+              exec mlflow server \
+                --host 0.0.0.0 \
+                --port {{ .Values.service.targetPort }} \
+                --backend-store-uri "${BACKEND_STORE_URI}" \
+                --no-serve-artifacts \
+                --default-artifact-root "${MLFLOW_ARTIFACT_ROOT}" \
+                --allowed-hosts "{{ .Values.mlflow.allowedHosts }}" \
+                --cors-allowed-origins "${CORS_ALLOWED_ORIGINS}" \
+                {{- range .Values.mlflow.extraArgs }}
+                {{ . }} \
+                {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.existingSecret }}
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.existingSecret }}
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.existingSecret }}
+                  key: POSTGRES_PASSWORD
+            - name: AZURE_STORAGE_ACCOUNT
+              value: {{ .Values.artifactStore.storageAccount | quote }}
+            - name: MLFLOW_ARTIFACT_UPLOAD_DOWNLOAD_TIMEOUT
+              value: {{ .Values.artifactStore.uploadDownloadTimeout | quote }}
+            - name: GUNICORN_CMD_ARGS
+              value: {{ .Values.env.GUNICORN_CMD_ARGS | quote }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

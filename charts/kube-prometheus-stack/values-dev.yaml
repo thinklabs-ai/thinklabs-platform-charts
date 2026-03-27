@@ -1,0 +1,26 @@
+kube-prometheus-stack:
+  alertmanager:
+    alertmanagerSpec:
+      storage:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: managed-csi
+            resources:
+              requests:
+                storage: 10Gi
+
+  grafana:
+    persistence:
+      storageClassName: managed-csi
+      size: 10Gi
+
+  prometheus:
+    prometheusSpec:
+      retention: 7d
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: managed-csi
+            resources:
+              requests:
+                storage: 50Gi

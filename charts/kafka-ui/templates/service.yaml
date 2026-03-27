@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kafka-ui.fullname" . }}
+  labels:
+    {{- include "kafka-ui.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app.kubernetes.io/name: {{ include "kafka-ui.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+---
+{{- if .Values.service.loadBalancer.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kafka-ui.fullname" . }}-lb
+  labels:
+    {{- include "kafka-ui.labels" . | nindent 4 }}
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    {{- if .Values.service.loadBalancer.tls.enabled }}
+    # Note: TLS termination is configured at the Azure Load Balancer level, not in Kubernetes Service
+    # See AZURE_LB_TLS_SETUP.md for configuration instructions
+    {{- end }}
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: {{ include "kafka-ui.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: http
+      port: {{ .Values.service.loadBalancer.port | default 80 }}
+      targetPort: http
+      protocol: TCP
+{{- end }}

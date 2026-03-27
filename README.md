@@ -646,7 +646,843 @@ helm upgrade document-generator-service ./charts/document-generator-service \
 
 ---
 
-**Last Updated:** February 2026
+---
+
+# 🗂️ Complete Chart Installation Guide
+
+This section provides installation instructions for all charts in this repository.
+
+## 📊 Chart Overview
+
+| Chart | Purpose | Version | Dependencies |
+|-------|---------|---------|--------------|
+| **document-generator-service** | Document generation microservice | 0.1.0 | None |
+| **kafka** | Apache Kafka single broker (KRaft mode) | 0.1.0 | None |
+| **kafka-ui** | Kafka Web UI Dashboard | 0.1.0 | Kafka |
+| **postgres** | PostgreSQL Database | 0.1.0 | None |
+| **redis** | Redis In-Memory Cache | 0.1.0 | None |
+| **observability** | Jaeger + OpenTelemetry Collector | 0.1.0 | None |
+| **kube-prometheus-stack** | Prometheus + Grafana + Alertmanager | 0.1.0 | Prometheus Community Charts |
+| **mlflow** | MLflow Model Tracking (Placeholder) | 0.1.0 | None |
+
+---
+
+## 🚀 Installation Order & Dependencies
+
+**Recommended installation order:**
+
+```
+1. postgres (database foundation)
+   ↓
+2. redis (cache layer)
+   ↓
+3. kafka (message queue)
+   ↓
+4. kafka-ui (kafka monitoring - optional)
+   ↓
+5. observability (jaeger + otel)
+   ↓
+6. kube-prometheus-stack (monitoring - optional)
+   ↓
+7. document-generator-service (application)
+   ↓
+8. mlflow (optional - ML tracking)
+```
+
+---
+
+## 🗄️ PostgreSQL Installation
+
+PostgreSQL serves as the primary database for the platform.
+
+### Prerequisites
+
+- AKS cluster with `managed-csi-premium` storage class
+- Namespace created (recommended: `postgres`)
+- Node pool with label `workload: postgres` (or modify nodeSelector)
+
+### Installation Steps
+
+```bash
+# Set environment variables
+export POSTGRES_NAMESPACE="postgres"
+export POSTGRES_PASSWORD="your-secure-password-here"
+export POSTGRES_DB="appdb"
+export POSTGRES_USER="appuser"
+
+# Create namespace
+kubectl create namespace ${POSTGRES_NAMESPACE}
+
+# Install PostgreSQL chart
+helm install postgres ./charts/postgres \
+  --namespace ${POSTGRES_NAMESPACE} \
+  --set postgres.password=${POSTGRES_PASSWORD} \
+  --set postgres.database=${POSTGRES_DB} \
+  --set postgres.username=${POSTGRES_USER} \
+  --set persistence.size=128Gi \
+  --set service.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-internal"="true"
+```
+
+### Verify Installation
+
+```bash
+# Check deployment status
+kubectl get deployment -n ${POSTGRES_NAMESPACE}
+kubectl get pvc -n ${POSTGRES_NAMESPACE}
+
+# Check pod logs
+kubectl logs -f -n ${POSTGRES_NAMESPACE} -l app=postgres
+
+# Get database connection details
+POSTGRES_HOST=$(kubectl get svc -n ${POSTGRES_NAMESPACE} postgres -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+echo "PostgreSQL Host: $POSTGRES_HOST"
+echo "PostgreSQL Port: 5432"
+echo "Database: ${POSTGRES_DB}"
+echo "Username: ${POSTGRES_USER}"
+```
+
+### Update Values
+
+Key configuration parameters in `values.yaml`:
+
+```yaml
+postgres:
+  database: appdb
+  username: appuser
+  password: "change-me"  # CHANGE THIS!
+  existingSecret: ""     # Optional: use existing secret
+
+persistence:
+  size: 128Gi            # Adjust storage size
+  storageClass: managed-csi-premium
+
+service:
+  type: LoadBalancer     # Or ClusterIP for internal only
+  port: 5432
+
+nodeSelector:
+  workload: postgres     # Ensure nodes have this label
+```
+
+---
+
+## 🔴 Redis Installation
+
+Redis provides in-memory caching for the platform.
+
+### Prerequisites
+
+- AKS cluster with `managed-csi` storage class
+- Namespace created (recommended: `redis`)
+- Node pool with label `workload-type: general`
+
+### Installation Steps
+
+```bash
+# Set environment variables
+export REDIS_NAMESPACE="redis"
+
+# Create namespace (chart can auto-create)
+kubectl create namespace ${REDIS_NAMESPACE}
+
+# Install Redis chart
+helm install redis ./charts/redis \
+  --namespace ${REDIS_NAMESPACE} \
+  --set namespace.create=true \
+  --set namespace.name=${REDIS_NAMESPACE} \
+  --set redis.persistence.size=5Gi \
+  --set redis.persistence.storageClassName=managed-csi
+```
+
+### Verify Installation
+
+```bash
+# Check deployment
+kubectl get deployment -n ${REDIS_NAMESPACE}
+kubectl get pvc -n ${REDIS_NAMESPACE}
+
+# Get Redis connection details
+REDIS_HOST=$(kubectl get svc -n ${REDIS_NAMESPACE} redis -o jsonpath='{.spec.clusterIP}')
+REDIS_PORT=$(kubectl get svc -n ${REDIS_NAMESPACE} redis -o jsonpath='{.spec.ports[0].port}')
+
+echo "Redis Host: $REDIS_HOST"
+echo "Redis Port: $REDIS_PORT"
+
+# Test Redis connection from a pod
+kubectl run redis-test --image=redis:7.2 --rm -it --restart=Never \
+  -- redis-cli -h $REDIS_HOST -p $REDIS_PORT ping
+```
+
+### Update Values
+
+Key configuration parameters:
+
+```yaml
+redis:
+  enabled: true
+  replicaCount: 1
+  
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClassName: managed-csi
+  
+  auth:
+    enabled: false        # Enable auth if needed
+    password: ""          # Set password if auth enabled
+  
+  service:
+    type: ClusterIP       # Internal-only access
+    port: 6379
+```
+
+---
+
+## 📨 Apache Kafka Installation
+
+Kafka serves as the message broker for event streaming.
+
+### Prerequisites
+
+- AKS cluster with `managed-csi` storage class
+- Namespace created (recommended: `kafka`)
+- Node pool with label `workload-type: general`
+- Persistent storage available (default: 100Gi)
+
+### Installation Steps
+
+```bash
+# Set environment variables
+export KAFKA_NAMESPACE="kafka"
+export KAFKA_CLUSTER_ID=$(uuidgen | tr '[:upper:]' '[:lower:]')
+
+# Create namespace
+kubectl create namespace ${KAFKA_NAMESPACE}
+
+# Create Kafka secret with cluster ID
+kubectl create secret generic kafka-secret \
+  --from-literal=KAFKA_CLUSTER_ID=${KAFKA_CLUSTER_ID} \
+  -n ${KAFKA_NAMESPACE}
+
+# Install Kafka chart
+helm install kafka ./charts/kafka \
+  --namespace ${KAFKA_NAMESPACE} \
+  --set kraft.clusterId=${KAFKA_CLUSTER_ID} \
+  --set persistence.size=100Gi \
+  --set persistence.storageClass=managed-csi \
+  --set service.port=9092
+```
+
+### Verify Installation
+
+```bash
+# Check StatefulSet and pods
+kubectl get statefulset -n ${KAFKA_NAMESPACE}
+kubectl get pods -n ${KAFKA_NAMESPACE}
+kubectl get pvc -n ${KAFKA_NAMESPACE}
+
+# Get Kafka broker address
+KAFKA_BROKER=$(kubectl get svc -n ${KAFKA_NAMESPACE} kafka -o jsonpath='{.spec.clusterIP}'):9092
+echo "Kafka Bootstrap Server: $KAFKA_BROKER"
+
+# Check Kafka logs
+kubectl logs -f -n ${KAFKA_NAMESPACE} kafka-0
+
+# Create a test topic
+kubectl run kafka-client --image=thinklabsinternalacrdev.azurecr.io/infra/kafka/kafka:4.2.0 \
+  --rm -it --restart=Never -n ${KAFKA_NAMESPACE} \
+  -- kafka-topics.sh --create --topic test --bootstrap-server kafka:9092 --partitions 1 --replication-factor 1
+```
+
+### Update Values
+
+Key configuration parameters:
+
+```yaml
+kraft:
+  clusterId: ""           # Auto-generated or set manually
+
+service:
+  port: 9092             # Client port
+  headlessPort: 9092     # Headless service port
+
+persistence:
+  size: 100Gi            # Adjust based on needs
+  storageClass: managed-csi
+
+resources:
+  requests:
+    cpu: "1"
+    memory: "2Gi"
+  limits:
+    cpu: "2"
+    memory: "4Gi"
+
+listeners:
+  client:
+    port: 9092
+  controller:
+    port: 9093
+  interBroker:
+    port: 9094
+```
+
+---
+
+## 📊 Kafka UI Installation
+
+Kafka UI provides a web interface for Kafka management and monitoring.
+
+### Prerequisites
+
+- Kafka chart already installed and running
+- Namespace created (recommended: `kafka-ui`)
+- Node pool with label `workload-type: general`
+
+### Installation Steps
+
+```bash
+# Set environment variables
+export KAFKAUI_NAMESPACE="kafka-ui"
+export KAFKA_NAMESPACE="kafka"
+
+# Create namespace
+kubectl create namespace ${KAFKAUI_NAMESPACE}
+
+# Get Kafka bootstrap servers
+export KAFKA_BOOTSTRAP_SERVERS="kafka-kafka.${KAFKA_NAMESPACE}.svc.cluster.local:9092"
+
+# Install Kafka UI chart
+helm install kafka-ui ./charts/kafka-ui \
+  --namespace ${KAFKAUI_NAMESPACE} \
+  --set kafka.bootstrapServers=${KAFKA_BOOTSTRAP_SERVERS} \
+  --set kafka.clusterName="thinklabs-dev-kafka" \
+  --set ingress.enabled=false
+```
+
+### Enable Ingress (Optional)
+
+To expose Kafka UI via ingress with OAuth:
+
+```bash
+helm upgrade kafka-ui ./charts/kafka-ui \
+  --namespace ${KAFKAUI_NAMESPACE} \
+  --set ingress.enabled=true \
+  --set ingress.host="kafka-ui.your-domain.com" \
+  --set ingress.className="nginx" \
+  --set ingress.tls.enabled=true \
+  --set ingress.tls.secretName="kafka-ui-tls"
+```
+
+### Verify Installation
+
+```bash
+# Check deployment
+kubectl get deployment -n ${KAFKAUI_NAMESPACE}
+
+# Port-forward to access UI locally
+kubectl port-forward -n ${KAFKAUI_NAMESPACE} svc/kafka-ui 8080:8080
+
+# Access at: http://localhost:8080
+```
+
+### Update Values
+
+Key configuration parameters:
+
+```yaml
+kafka:
+  bootstrapServers: "kafka-kafka.kafka.svc.cluster.local:9092"
+  clusterName: "thinklabs-dev-kafka"
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+  className: nginx
+  host: kafka-ui.dev.thinklabs.ai
+  path: /
+  pathType: Prefix
+  tls:
+    enabled: false
+    secretName: ""
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: "https://auth.dev.thinklabs.ai/oauth2/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://auth.dev.thinklabs.ai/oauth2/start?rd=$scheme://$http_host$escaped_request_uri"
+```
+
+---
+
+## 🔍 Observability Stack Installation
+
+The observability stack includes Jaeger (distributed tracing) and OpenTelemetry Collector.
+
+### Prerequisites
+
+- AKS cluster with persistent storage
+- Namespace created (recommended: `observability`)
+- Node pool with label `workload-type: general`
+
+### Installation Steps
+
+```bash
+# Set environment variables
+export OBSERVABILITY_NAMESPACE="observability"
+
+# Create namespace
+kubectl create namespace ${OBSERVABILITY_NAMESPACE}
+
+# Install observability chart
+helm install observability ./charts/observability \
+  --namespace ${OBSERVABILITY_NAMESPACE} \
+  --set namespace.create=false \
+  --set namespace.name=${OBSERVABILITY_NAMESPACE} \
+  --set jaeger.enabled=true \
+  --set otelCollector.enabled=true
+```
+
+### Verify Installation
+
+```bash
+# Check deployments
+kubectl get deployment -n ${OBSERVABILITY_NAMESPACE}
+kubectl get pods -n ${OBSERVABILITY_NAMESPACE}
+
+# Access Jaeger UI via port-forward
+kubectl port-forward -n ${OBSERVABILITY_NAMESPACE} svc/jaeger 16686:16686
+
+# Access Jaeger UI at: http://localhost:16686
+
+# Check Jaeger logs
+kubectl logs -f -n ${OBSERVABILITY_NAMESPACE} -l app=jaeger
+
+# Check OTEL Collector logs
+kubectl logs -f -n ${OBSERVABILITY_NAMESPACE} -l app=otel-collector
+```
+
+### Configuration
+
+The OTEL Collector is configured to:
+- Receive telemetry via OTLP gRPC on port 4317
+- Receive telemetry via OTLP HTTP on port 4318
+- Export traces to Jaeger on port 4317
+
+Update the collector config in `values.yaml`:
+
+```yaml
+otelCollector:
+  config: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch:
+
+    exporters:
+      otlp:
+        endpoint: jaeger:4317
+        tls:
+          insecure: true
+
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlp, logging]
+```
+
+### Application Integration
+
+To send traces from your application:
+
+```bash
+# Set OTEL exporter endpoint
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://otel-collector.observability.svc.cluster.local:4317"
+export OTEL_SERVICE_NAME="your-app-name"
+export OTEL_TRACES_EXPORTER="otlp"
+```
+
+---
+
+## 📈 Kube Prometheus Stack Installation
+
+Complete monitoring stack with Prometheus, Grafana, and Alertmanager.
+
+### Prerequisites
+
+- AKS cluster with `managed-csi` storage class
+- Namespace created (recommended: `monitoring`)
+- Node pool with label `workload-type: general`
+- Helm repo added: `helm repo add prometheus-community https://prometheus-community.github.io/helm-charts`
+
+### Installation Steps
+
+```bash
+# Set environment variables
+export MONITORING_NAMESPACE="monitoring"
+export GRAFANA_ADMIN_PASSWORD="your-secure-password"
+
+# Create namespace
+kubectl create namespace ${MONITORING_NAMESPACE}
+
+# Create Grafana admin secret
+kubectl create secret generic grafana-admin-secret \
+  --from-literal=admin-user=admin \
+  --from-literal=admin-password=${GRAFANA_ADMIN_PASSWORD} \
+  -n ${MONITORING_NAMESPACE}
+
+# Update Helm repos
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+# Install kube-prometheus-stack
+helm install kube-prometheus-stack ./charts/kube-prometheus-stack \
+  --namespace ${MONITORING_NAMESPACE} \
+  --set kube-prometheus-stack.prometheus.prometheusSpec.retention=30d \
+  --set kube-prometheus-stack.prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.accessModes[0]=ReadWriteOnce \
+  --set kube-prometheus-stack.prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage=50Gi
+```
+
+### Verify Installation
+
+```bash
+# Check all components
+kubectl get all -n ${MONITORING_NAMESPACE}
+
+# Access Prometheus UI
+kubectl port-forward -n ${MONITORING_NAMESPACE} svc/kube-prometheus-stack-prometheus 9090:9090
+# Access at: http://localhost:9090
+
+# Access Grafana UI
+kubectl port-forward -n ${MONITORING_NAMESPACE} svc/kube-prometheus-stack-grafana 3000:80
+# Access at: http://localhost:3000
+# Login with admin / ${GRAFANA_ADMIN_PASSWORD}
+
+# Access Alertmanager UI
+kubectl port-forward -n ${MONITORING_NAMESPACE} svc/kube-prometheus-stack-alertmanager 9093:9093
+# Access at: http://localhost:9093
+
+# Check alerting rules
+kubectl get prometheusrules -n ${MONITORING_NAMESPACE}
+```
+
+### Update Values
+
+Key configuration parameters:
+
+```yaml
+kube-prometheus-stack:
+  alertmanager:
+    enabled: true
+    alertmanagerSpec:
+      replicas: 1
+      storage:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: managed-csi
+            accessModes: [ReadWriteOnce]
+            resources:
+              requests:
+                storage: 20Gi
+
+  grafana:
+    enabled: true
+    persistence:
+      enabled: true
+      storageClassName: managed-csi
+      size: 20Gi
+    admin:
+      existingSecret: grafana-admin-secret
+
+  prometheus:
+    prometheusSpec:
+      retention: 30d
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: managed-csi
+            resources:
+              requests:
+                storage: 50Gi
+```
+
+---
+
+## 🎯 Document Generator Service Installation
+
+Complete installation instructions already provided above in this README.
+
+### Quick Install
+
+```bash
+export NAMESPACE="document-generator-service"
+export ACR_LOGIN_SERVER="your-acr.azurecr.io"
+export STORAGE_ACCOUNT_NAME="your-storage-account"
+export STORAGE_CONTAINER="reports"
+export MANAGED_IDENTITY_CLIENT_ID="your-client-id"
+
+kubectl create namespace ${NAMESPACE}
+
+kubectl create secret docker-registry acr-creds \
+  --docker-server=${ACR_LOGIN_SERVER} \
+  --docker-username=${ACR_USERNAME} \
+  --docker-password=${ACR_PASSWORD} \
+  --docker-email=${DOCKER_EMAIL} \
+  --namespace=${NAMESPACE}
+
+helm install document-generator-service ./charts/document-generator-service \
+  --namespace ${NAMESPACE} \
+  --set image.repository=${ACR_LOGIN_SERVER}/thinklabs-document-generator-service-x86 \
+  --set azure.storageAccount=${STORAGE_ACCOUNT_NAME} \
+  --set azure.container=${STORAGE_CONTAINER} \
+  --set "serviceAccount.annotations.azure\.workload\.identity/client-id"=${MANAGED_IDENTITY_CLIENT_ID}
+```
+
+---
+
+## 🧪 MLflow Installation (Placeholder)
+
+MLflow serves as the model tracking and management system.
+
+### Current Status
+
+The MLflow chart is currently a placeholder. To properly set up MLflow:
+
+1. **Option A: Use MLflow Helm Chart (Community)**
+
+```bash
+helm repo add community-charts https://charts.bitnami.com/bitnami
+helm repo update
+
+helm install mlflow community-charts/mlflow \
+  --namespace mlflow \
+  --create-namespace \
+  --set postgresql.auth.password=mlflow-password \
+  --set service.type=ClusterIP
+```
+
+2. **Option B: Use Thinklabs Custom Chart**
+
+When the MLflow chart is implemented, use:
+
+```bash
+kubectl create namespace mlflow
+
+helm install mlflow ./charts/mlflow \
+  --namespace mlflow
+```
+
+### Verify Installation
+
+```bash
+# Check MLflow service
+kubectl get svc -n mlflow
+
+# Port-forward to access UI
+kubectl port-forward -n mlflow svc/mlflow 5000:5000
+
+# Access MLflow UI at: http://localhost:5000
+```
+
+---
+
+## 🔄 Complete Platform Installation Script
+
+For a complete platform setup, use this orchestrated installation:
+
+```bash
+#!/bin/bash
+
+set -e
+
+echo "🚀 Starting ThinkLabs Platform Installation..."
+
+# Set variables
+export SUBSCRIPTIONS_ID="<your-subscription>"
+export RESOURCE_GROUP="<your-rg>"
+export AKS_CLUSTER_NAME="<your-cluster>"
+export LOCATION="eastus"
+
+# 1. PostgreSQL
+echo "📦 Installing PostgreSQL..."
+kubectl create namespace postgres || true
+helm install postgres ./charts/postgres \
+  --namespace postgres \
+  --set postgres.password="$(openssl rand -base64 32)"
+
+# 2. Redis
+echo "📦 Installing Redis..."
+helm install redis ./charts/redis \
+  --namespace redis \
+  --create-namespace
+
+# 3. Kafka
+echo "📦 Installing Kafka..."
+kubectl create namespace kafka || true
+KAFKA_CLUSTER_ID=$(uuidgen | tr '[:upper:]' '[:lower:]')
+kubectl create secret generic kafka-secret \
+  --from-literal=KAFKA_CLUSTER_ID=${KAFKA_CLUSTER_ID} \
+  -n kafka --dry-run=client -o yaml | kubectl apply -f -
+
+helm install kafka ./charts/kafka \
+  --namespace kafka \
+  --set kraft.clusterId=${KAFKA_CLUSTER_ID}
+
+# 4. Kafka UI
+echo "📦 Installing Kafka UI..."
+helm install kafka-ui ./charts/kafka-ui \
+  --namespace kafka-ui \
+  --create-namespace \
+  --set kafka.bootstrapServers="kafka-kafka.kafka.svc.cluster.local:9092"
+
+# 5. Observability
+echo "📦 Installing Observability Stack..."
+helm install observability ./charts/observability \
+  --namespace observability \
+  --create-namespace
+
+# 6. Kube Prometheus Stack
+echo "📦 Installing Monitoring Stack..."
+kubectl create namespace monitoring || true
+kubectl create secret generic grafana-admin-secret \
+  --from-literal=admin-user=admin \
+  --from-literal=admin-password="$(openssl rand -base64 32)" \
+  -n monitoring --dry-run=client -o yaml | kubectl apply -f -
+
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+helm install kube-prometheus-stack ./charts/kube-prometheus-stack \
+  --namespace monitoring
+
+# 7. Document Generator Service
+echo "📦 Installing Document Generator Service..."
+kubectl create namespace document-generator-service || true
+# Create acr-creds secret before installing
+
+helm install document-generator-service ./charts/document-generator-service \
+  --namespace document-generator-service
+
+echo "✅ Platform installation complete!"
+echo ""
+echo "📊 Installed Components:"
+echo "  - PostgreSQL (namespace: postgres)"
+echo "  - Redis (namespace: redis)"
+echo "  - Kafka (namespace: kafka)"
+echo "  - Kafka UI (namespace: kafka-ui)"
+echo "  - Observability - Jaeger & OTEL (namespace: observability)"
+echo "  - Prometheus + Grafana (namespace: monitoring)"
+echo "  - Document Generator Service (namespace: document-generator-service)"
+```
+
+---
+
+## 🛠️ Troubleshooting Common Issues
+
+### 1. ImagePullBackOff Error
+
+**Cause:** ACR credentials not set or incorrect image path
+
+```bash
+# Check if imagePullSecrets are configured
+kubectl get pods -n <namespace> <pod-name> -o yaml | grep imagePullSecrets
+
+# Create or update ACR secret
+kubectl create secret docker-registry acr-creds \
+  --docker-server=<acr-url> \
+  --docker-username=<username> \
+  --docker-password=<password> \
+  --docker-email=<email> \
+  -n <namespace> --dry-run=client -o yaml | kubectl apply -f -
+
+# Restart pods
+kubectl rollout restart deployment/<deployment-name> -n <namespace>
+```
+
+### 2. PVC Pending
+
+**Cause:** Storage class not available
+
+```bash
+# List available storage classes
+kubectl get storageclass
+
+# Check PVC status
+kubectl describe pvc <pvc-name> -n <namespace>
+
+# Update chart to use available storage class
+helm upgrade <release> ./charts/<chart> \
+  --namespace <namespace> \
+  --set persistence.storageClass=<available-class>
+```
+
+### 3. Pod CrashLoopBackOff
+
+**Cause:** Application configuration or resource issues
+
+```bash
+# Check logs
+kubectl logs -f -n <namespace> <pod-name>
+
+# Describe pod for events
+kubectl describe pod <pod-name> -n <namespace>
+
+# Check resource availability
+kubectl top nodes
+kubectl top pods -n <namespace>
+```
+
+### 4. Service Discovery Issues
+
+**Cause:** Incorrect hostname in configuration
+
+```bash
+# Verify service DNS
+kubectl run -it --rm debug --image=busybox --restart=Never -- \
+  nslookup <service-name>.<namespace>.svc.cluster.local
+
+# Update values to use correct DNS name
+# Format: <service-name>.<namespace>.svc.cluster.local
+```
+
+---
+
+## 📋 Pre-Installation Checklist
+
+Before installing all charts, verify:
+
+- ✅ AKS cluster is running and accessible
+- ✅ kubectl is configured and authenticated
+- ✅ Helm 3.x is installed
+- ✅ Enough storage classes available (`managed-csi`, `managed-csi-premium`)
+- ✅ Node pools have required labels (`workload-type: general`, `workload: postgres`, etc.)
+- ✅ ACR credentials are available
+- ✅ Required namespaces can be created
+- ✅ Storage accounts and managed identities are set up (for Document Generator Service)
+- ✅ Sufficient cluster resources (CPU, memory)
+
+---
+
+## 📚 Additional References
+
+- [Helm Documentation](https://helm.sh/docs/)
+- [Apache Kafka KRaft Mode](https://kafka.apache.org/documentation/#kraft)
+- [Jaeger Distributed Tracing](https://www.jaegertracing.io/)
+- [OpenTelemetry](https://opentelemetry.io/)
+- [Prometheus Documentation](https://prometheus.io/docs/)
+- [Grafana Documentation](https://grafana.com/docs/)
+
+---
+
+**Last Updated:** March 2026
 
 For questions or issues, please contact the platform engineering team.
 

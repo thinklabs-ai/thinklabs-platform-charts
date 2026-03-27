@@ -1,0 +1,23 @@
+{{- if .Values.service.internalLoadBalancer.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tensorboard.fullname" . }}-internal
+  namespace: {{ include "tensorboard.namespace" . }}
+  labels:
+    {{- include "tensorboard.labels" . | nindent 4 }}
+  annotations:
+    {{- toYaml .Values.service.internalLoadBalancer.annotations | nindent 4 }}
+spec:
+  type: LoadBalancer
+  {{- if .Values.service.internalLoadBalancer.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.service.internalLoadBalancer.loadBalancerIP }}
+  {{- end }}
+  selector:
+    {{- include "tensorboard.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http-lb
+      port: {{ .Values.service.internalLoadBalancer.port }}
+      targetPort: 6006
+      protocol: TCP
+{{- end }}

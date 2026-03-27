@@ -1,0 +1,24 @@
+{{- if .Values.otelCollector.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app.kubernetes.io/name: otel-collector
+    app.kubernetes.io/component: otel-collector
+spec:
+  type: {{ .Values.otelCollector.service.type }}
+  selector:
+    app.kubernetes.io/name: otel-collector
+    app.kubernetes.io/component: otel-collector
+  ports:
+    - name: otlp-http
+      port: {{ .Values.otelCollector.service.otlpHttpPort }}
+      targetPort: otlp-http
+      protocol: TCP
+    - name: otlp-grpc
+      port: {{ .Values.otelCollector.service.otlpGrpcPort }}
+      targetPort: otlp-grpc
+      protocol: TCP
+{{- end }}

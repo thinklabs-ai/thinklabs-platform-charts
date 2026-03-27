@@ -1,0 +1,63 @@
+replicaCount: 1
+
+image:
+  repository: thinklabsinternalacrdev.azurecr.io/infra/kafka-ui/kafka-ui
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 8080
+  loadBalancer:
+    enabled: true
+    # Set to true to use an internal load balancer on AKS
+    # When enabled, the service will be configured with Azure internal load balancer annotation
+    port: 80
+    # Port that the load balancer listens on (default: 80). 
+    # Traffic on this port will be forwarded to the container port 8080
+    tls:
+      enabled: false
+      # TLS/HTTPS is configured at the Azure Load Balancer level, not in Kubernetes Service
+      # See AZURE_LB_TLS_SETUP.md for instructions on how to configure TLS on Azure LB
+      port: 443
+      certificateSecretName: "kafka-ui-tls"
+
+kafka:
+  bootstrapServers: "kafka-kafka.kafka.svc.cluster.local:9092"
+  clusterName: "thinklabs-dev-kafka"
+
+resources:
+  requests:
+    cpu: "250m"
+    memory: "512Mi"
+  limits:
+    cpu: "1"
+    memory: "1Gi"
+
+nodeSelector:
+  workload-type: general
+
+tolerations:
+  - key: "workload-type"
+    operator: "Equal"
+    value: "general"
+    effect: "NoSchedule"
+
+affinity: {}
+
+ingress:
+  enabled: false
+  # Ingress is disabled by default. This service uses internal LoadBalancer instead.
+  # To enable ingress, set enabled: true and configure the values below
+  className: nginx
+  host: kafka-ui.dev.thinklabs.ai
+  path: /
+  pathType: Prefix
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: "https://auth.dev.thinklabs.ai/oauth2/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://auth.dev.thinklabs.ai/oauth2/start?rd=$scheme://$http_host$escaped_request_uri"

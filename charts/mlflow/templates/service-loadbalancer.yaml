@@ -1,0 +1,31 @@
+{{- if .Values.loadBalancerService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mlflow.fullname" . }}-lb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "mlflow.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    {{- if .Values.loadBalancerService.internal }}
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    {{- end }}
+    {{- with .Values.loadBalancerService.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: {{ .Values.loadBalancerService.externalTrafficPolicy | default "Cluster" }}
+  {{- if .Values.loadBalancerService.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.loadBalancerService.loadBalancerIP }}
+  {{- end }}
+  selector:
+    app.kubernetes.io/name: {{ include "mlflow.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: http
+      port: {{ .Values.loadBalancerService.port | default 80 }}
+      targetPort: {{ .Values.service.targetPort | default 5000 }}
+      protocol: TCP
+{{- end }}
