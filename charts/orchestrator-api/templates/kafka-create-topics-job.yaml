@@ -1,0 +1,21 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kafka-create-topics
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: kafka-create-topics
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: kafka-create-topics
+          image: thinklabsinternalacrdev.azurecr.io/infra/kafka/kafka:4.2.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              /opt/kafka/bin/kafka-topics.sh --bootstrap-server {{ .Values.kafka.bootstrap }} --create --if-not-exists --topic {{ .Values.tenant }}.mlops.request --partitions {{ .Values.kafka.topicPartitions }} --replication-factor {{ .Values.kafka.topicReplication }} || true
+              /opt/kafka/bin/kafka-topics.sh --bootstrap-server {{ .Values.kafka.bootstrap }} --create --if-not-exists --topic {{ .Values.tenant }}.mlops.status --partitions {{ .Values.kafka.topicPartitions }} --replication-factor {{ .Values.kafka.topicReplication }} || true
+              /opt/kafka/bin/kafka-topics.sh --bootstrap-server {{ .Values.kafka.bootstrap }} --create --if-not-exists --topic {{ .Values.tenant }}.mlops.response --partitions {{ .Values.kafka.topicPartitions }} --replication-factor {{ .Values.kafka.topicReplication }} || true

@@ -20,6 +20,10 @@ kubeconfig
 .env.local
 *.local
 
+# Secrets - never commit sensitive values
+*-secrets.yaml
+values-secrets.yaml
+
 # OS-specific files
 .DS_Store
 Thumbs.db
@@ -37,6 +41,12 @@ logs/
 dist/
 build/
 *.out
+
+# Tests
+tests/
+
+# Documentation
+docs/
 
 # Dependencies (if using any package managers)
 node_modules/

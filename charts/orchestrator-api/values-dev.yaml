@@ -1,0 +1,100 @@
+# Azure Development Environment Values
+namespace: orchestrator
+
+tenant: thinklabs
+environment: dev
+
+# Azure Container Registry
+image:
+  repository: thinklabsinternalacrdev.azurecr.io/apps/orchestrator-api
+  tag: latest
+  pullPolicy: IfNotPresent
+
+statusConsumerImage:
+  repository: thinklabsinternalacrdev.azurecr.io/apps/status-consumer
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+# Resource limits for Azure
+resources:
+  api:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  statusConsumer:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+api:
+  service:
+    type: ClusterIP
+    port: 8080
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts:
+      - host: "dev.service.thinklabs.ai"
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - hosts:
+          - "dev.service.thinklabs.ai"
+        secretName: "dev-service-thinklabs-ai-tls"
+
+# Kafka deployed in AKS (in a separate nodepool)
+env:
+  KAFKA_BROKERS: "kafka-kafka.kafka:9092"
+  KAFKA_SECURITY_PROTOCOL: "PLAINTEXT"
+  
+  TOPIC_REQUESTS: "thinklabs.mlops.request"
+  TOPIC_STATUS: "thinklabs.mlops.status"
+  TOPIC_RESPONSE: "thinklabs.mlops.response"
+  
+  # Azure Cache for Redis (or in-cluster Redis)
+  STATUS_STORE: redis
+  REDIS_ADDR: "redis-service.redis:6379"  # Change to Azure Redis if using managed service
+  REDIS_DB: "0"
+  REDIS_PASSWORD: "" # Only needed if using managed Azure Redis
+  REDIS_TLS_ENABLED: "false"
+  
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.observability.svc.cluster.local:4318
+  OTEL_ENV: "dev"
+  # Slack notifications
+  SLACK_NOTIFY_STATUSES: "FAILED,SUCCEEDED,PENDING"
+
+# Slack Webhook Configuration - override in separate secrets file or use environment
+slackWebhook:
+  enabled: true
+  url: ""  # Set via: --set slackWebhook.url='<webhook-url>' or values-secrets.yaml
+
+# Service Account Configuration for Workload Identity
+serviceAccount:
+  create: true
+  annotations:
+    # Workload Identity annotation - bind to Azure managed identity
+    # Set CLIENT_ID to the actual managed identity client ID after creating the identity
+    azure.workload.identity/client-id: "6c96d2e4-0cf1-4499-bc6c-71044d8b483c"
+
+# Pod Annotations for Workload Identity
+podAnnotations:
+  # Enable Workload Identity on all pods
+  azure.workload.identity/use: "true"
+
+# Kafka configuration for topic creation (in-cluster Kafka)
+kafka:
+  bootstrap: "kafka-kafka.kafka:9092"
+  topicPartitions: 3
+  topicReplication: 3
+  cliImage: confluentinc/cp-kafka:7.4.0
