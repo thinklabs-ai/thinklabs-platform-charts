@@ -658,8 +658,7 @@ This section covers Azure AKS-specific configuration and best practices.
 ### Files Overview
 
 - **values-dev.yaml** - Development environment configuration (2 replicas, smaller resources)
-- **secrets-example.yaml** - Example template for Kubernetes secrets (DO NOT commit with real values)
-- **create-secrets.sh** - Interactive script to create optional secrets in your cluster
+- **values.yaml** - Default Helm values
 
 ### Azure Prerequisites
 
